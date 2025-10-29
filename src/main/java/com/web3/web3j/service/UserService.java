@@ -29,6 +29,20 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    // Update user
+    public Optional<UserAccount> updateUser(Long userId, UserAccount updatedUser) {
+        return userRepository.findById(userId).map(user -> {
+            user.setEmail(updatedUser.getEmail());
+            user.setUsername(updatedUser.getUsername());
+            return userRepository.save(user);
+        });
+    }
+
+    // Delete user
+    public void deleteUser(Long userId) {
+        userRepository.deleteById(userId);
+    }
+
     // Create a new wallet for a user
     public WalletEntity createWalletForUser(Long userId, String password, String walletName) throws Exception {
         return walletService.createWalletForUser(userId, password, walletName);
