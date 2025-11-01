@@ -1,9 +1,11 @@
 package com.web3.web3j.controller;
 
 import com.web3.web3j.DTO.CreateUser;
+import com.web3.web3j.DTO.UpdateUser;
 import com.web3.web3j.model.UserAccount;
 import com.web3.web3j.service.UserService;
 import org.apache.catalina.User;
+import org.hibernate.sql.Update;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,9 +25,14 @@ public class UserAccountController {
         if (request.getEmail() == null || request.getUsername() == null) {
             return ResponseEntity.badRequest().build();
         }
-
         UserAccount user = userService.createUser(request.getUsername(), request.getEmail());
         return ResponseEntity.ok(user);
+    }
+    // find all users
+    @GetMapping("/all")
+    public ResponseEntity<Iterable<UserAccount>> getAllUsers() {
+        Iterable<UserAccount> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
     }
 
     @GetMapping("/find/{userId}")
@@ -41,7 +48,7 @@ public class UserAccountController {
     }
 
     @PutMapping("/update/{userId}")
-    public ResponseEntity<UserAccount> updateUser(@PathVariable Long userId, @RequestBody UserAccount request) {
+    public ResponseEntity<UserAccount> updateUser(@PathVariable Long userId, @RequestBody UpdateUser request) {
         Optional<UserAccount> updatedUser = userService.updateUser(userId, request);
         return updatedUser.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }

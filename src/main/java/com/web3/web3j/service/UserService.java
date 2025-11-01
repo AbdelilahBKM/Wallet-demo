@@ -1,5 +1,6 @@
 package com.web3.web3j.service;
 
+import com.web3.web3j.DTO.UpdateUser;
 import com.web3.web3j.model.UserAccount;
 import com.web3.web3j.model.WalletEntity;
 import org.springframework.stereotype.Service;
@@ -23,14 +24,39 @@ public class UserService {
         this.blockchainService = blockchainService;
     }
 
+    // Get all users
+    public Iterable<UserAccount> getAllUsers() {
+        return userRepository.findAll();
+    }
+
     // Create a new user account
     public UserAccount createUser(String username, String email) {
+        // find email or username existence could be added here
+        if(
+                userRepository.findByUsername(username).isPresent() ||
+                userRepository.findByUsername(email).isPresent()
+        ) {
+            throw new IllegalArgumentException("Username already exists");
+        }
         UserAccount user = new UserAccount(username, email);
         return userRepository.save(user);
     }
 
     // Update user
-    public Optional<UserAccount> updateUser(Long userId, UserAccount updatedUser) {
+    public Optional<UserAccount> updateUser(Long userId, UpdateUser updatedUser) {
+        // check for email or username existence could be added here
+        if(
+                userRepository.findByUsername(updatedUser.getUsername()).isPresent() &&
+                !userRepository.findByUsername(updatedUser.getUsername()).get().getId().equals(userId)
+        ) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+        if(
+                userRepository.findByUsername(updatedUser.getEmail()).isPresent() &&
+                !userRepository.findByUsername(updatedUser.getEmail()).get().getId().equals(userId)
+        ) {
+            throw new IllegalArgumentException("Email already exists");
+        }
         return userRepository.findById(userId).map(user -> {
             user.setEmail(updatedUser.getEmail());
             user.setUsername(updatedUser.getUsername());
