@@ -1,5 +1,6 @@
 package com.web3.web3j.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -7,6 +8,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "user_account")
+@JsonIgnoreProperties({"wallets"}) // Prevent circular reference by ignoring wallets in JSON serialization
 public class UserAccount {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

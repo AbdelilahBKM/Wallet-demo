@@ -1,0 +1,203 @@
+// Smoke test for Wallet + Blockchain (IntelliJ / JetBrains HTTP Client)
+// This file uses the real controller mappings found in the project.
+
+### Create User A
+POST http://localhost:8080/userAccount/create
+Content-Type: application/json
+
+{
+  "username": "alice-smoke-{{$timestamp}}",
+  "email": "alice.smoke.{{$timestamp}}@example.com"
+}
+
+> {%
+client.test("Create User A", function() {
+    client.assert(response.status === 200, "User A creation failed");
+    const userId = response.body.id;
+    client.global.set("userA_id", userId);
+    client.log("User A ID: " + userId);
+});
+%}
+
+### Create User B
+POST http://localhost:8080/userAccount/create
+Content-Type: application/json
+
+{
+  "username": "bob-smoke-{{$timestamp}}",
+  "email": "bob.smoke.{{$timestamp}}@example.com"
+}
+
+> {%
+client.test("Create User B", function() {
+    client.assert(response.status === 200, "User B creation failed");
+    const userId = response.body.id;
+    client.global.set("userB_id", userId);
+    client.log("User B ID: " + userId);
+});
+%}
+
+### Create Wallet for User A
+POST http://localhost:8080/wallets/create/{{userA_id}}/wallets
+Content-Type: application/json
+
+{
+  "password": "pass123",
+  "walletName": "alice-main"
+}
+
+> {%
+client.test("Create Wallet A", function() {
+    client.assert(response.status === 200, "Wallet A creation failed");
+    client.log("Full Wallet A Response: " + JSON.stringify(response.body));
+
+    // Try different possible field names
+    const walletId = response.body.id || response.body.walletId;
+    const address = response.body.address || response.body.walletAddress;
+
+    if (walletId) {
+        client.global.set("walletA_id", walletId);
+        client.log("User A Wallet ID: " + walletId);
+    } else {
+        client.log("WARNING: Could not find wallet ID in response");
+    }
+
+    if (address) {
+        client.global.set("userA_address", address);
+        client.log("User A Address: " + address);
+    } else {
+        client.log("WARNING: Could not find address in response");
+    }
+});
+%}
+
+### Create Wallet for User B
+POST http://localhost:8080/wallets/create/{{userB_id}}/wallets
+Content-Type: application/json
+
+{
+  "password": "pass123",
+  "walletName": "bob-main"
+}
+
+> {%
+client.test("Create Wallet B", function() {
+    client.assert(response.status === 200, "Wallet B creation failed");
+    client.log("Full Wallet B Response: " + JSON.stringify(response.body));
+
+    // Try different possible field names
+    const walletId = response.body.id || response.body.walletId;
+    const address = response.body.address || response.body.walletAddress;
+
+    if (walletId) {
+        client.global.set("walletB_id", walletId);
+        client.log("User B Wallet ID: " + walletId);
+    } else {
+        client.log("WARNING: Could not find wallet ID in response");
+    }
+
+    if (address) {
+        client.global.set("userB_address", address);
+        client.log("User B Address: " + address);
+    } else {
+        client.log("WARNING: Could not find address in response");
+    }
+});
+%}
+
+### Get Wallets for User A
+GET http://localhost:8080/wallets/users/{{userA_id}}/wallets
+
+### Get Wallet Balance by walletId
+GET http://localhost:8080/blockchain/wallets/{{walletA_id}}/balance
+
+> {%
+client.test("Check Balance A", function() {
+    client.assert(response.status === 200, "Balance check failed");
+    client.log("User A Balance: " + JSON.stringify(response.body));
+});
+%}
+
+### Get Address Balance for User A wallet
+GET http://localhost:8080/blockchain/balance/{{userA_address}}
+
+> {%
+client.test("Check Address Balance A", function() {
+    client.assert(response.status === 200, "Address balance check failed");
+    client.log("User A Address Balance: " + JSON.stringify(response.body));
+});
+%}
+
+### Get Address Balance for User B wallet
+GET http://localhost:8080/blockchain/balance/{{userB_address}}
+
+> {%
+client.test("Check Address Balance B", function() {
+    client.assert(response.status === 200, "Address balance check failed");
+    client.log("User B Address Balance: " + JSON.stringify(response.body));
+});
+%}
+
+### MANUAL FUNDING STEP
+// Before running transfers, you need to fund User A's wallet with ETH
+// Check the console logs above for User A's address, then:
+// 1. If using Ganache: Send ETH to {{userA_address}}
+// 2. If using testnet: Use a faucet to fund {{userA_address}}
+// 3. Wait for confirmation, then run the transfers below
+
+### Send ETH from User A to User B
+POST http://localhost:8080/blockchain/wallets/{{walletA_id}}/send-ether
+Content-Type: application/json
+
+{
+  "password": "pass123",
+  "toAddress": "{{userB_address}}",
+  "amount": "0.05"
+}
+
+> {%
+client.test("Send ETH", function() {
+    if (response.status === 200) {
+        const txHash = response.body.transactionHash;
+        client.global.set("eth_txHash", txHash);
+        client.log("ETH Transfer Success - TX Hash: " + txHash);
+    } else {
+        client.log("ETH Transfer Failed: " + response.body);
+    }
+});
+%}
+
+### Transfer ERC20 from User A to User B
+POST http://localhost:8080/blockchain/wallets/{{walletA_id}}/transfer-erc20
+Content-Type: application/json
+
+{
+  "password": "pass123",
+  "contractAddress": "0x1111111111111111111111111111111111111111",
+  "toAddress": "{{userB_address}}",
+  "amount": "50"
+}
+
+> {%
+client.test("Transfer ERC20", function() {
+    if (response.status === 200) {
+        const txHash = response.body.transactionHash;
+        client.global.set("erc20_txHash", txHash);
+        client.log("ERC20 Transfer Success - TX Hash: " + txHash);
+    } else {
+        client.log("ERC20 Transfer Failed: " + response.body);
+    }
+});
+%}
+
+### Validate User A Address
+GET http://localhost:8080/blockchain/validate-address/{{userA_address}}
+
+### Validate User B Address
+GET http://localhost:8080/blockchain/validate-address/{{userB_address}}
+
+// WORKFLOW:
+// 1. Run all requests in order (the scripts will automatically extract and store IDs/addresses)
+// 2. Check the console/logs for the actual wallet addresses
+// 3. Fund User A's address with ETH using your node/faucet
+// 4. Re-run the transfer requests to complete the test
